@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sequence Editor</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f0f0; padding: 2em; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        textarea { width: 100%; height: 150px; box-sizing: border-box; margin-bottom: 1em; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; border: none; background-color: #428bca; color: white; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button:hover { background-color: #357ebd; }
+        #status { margin-top: 1em; color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sequence Editor</h1>
+        <p>Enter your numbers separated by commas. This will be used by the random number generator.</p>
+        <textarea id="sequenceInput" placeholder="e.g., 11, 22, 33, 44, 55, 69"></textarea>
+        <button onclick="saveSequence()">Save Sequence for Generator</button>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        const sequenceInput = document.getElementById('sequenceInput');
+        const status = document.getElementById('status');
+
+        // Load the saved sequence when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedSequence = localStorage.getItem('customSequence');
+            if (savedSequence) {
+                sequenceInput.value = savedSequence;
+                status.textContent = 'Loaded previously saved sequence.';
+            }
+        });
+
+        function saveSequence() {
+            const sequence = sequenceInput.value;
+            if (sequence.trim() === '') {
+                localStorage.removeItem('customSequence'); // Clear storage if input is empty
+                status.textContent = 'Sequence cleared. The generator will use its default.';
+            } else {
+                localStorage.setItem('customSequence', sequence);
+                status.textContent = 'Sequence saved! You can now open or refresh the main random.org page.';
+            }
+        }
+    </script>
+</body>
+</html>
