@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,43 +6,235 @@
     <style>
         body { font-family: sans-serif; background-color: #f0f0f0; padding: 2em; }
         .container { max-width: 600px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        h1 { color: #333; }
-        textarea { width: 100%; height: 150px; box-sizing: border-box; margin-bottom: 1em; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 15px; border: none; background-color: #428bca; color: white; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        h1, h2 { color: #333; }
+        h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 0.5em; margin-bottom: 1em; }
+        textarea { width: 100%; height: 120px; box-sizing: border-box; margin-bottom: 1em; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 1.1em; }
+        button { padding: 10px 15px; border: none; background-color: #428bca; color: white; border-radius: 4px; cursor: pointer; font-size: 1em; margin-right: 5px; margin-bottom: 5px; }
         button:hover { background-color: #357ebd; }
-        #status { margin-top: 1em; color: green; font-weight: bold; }
+        #status { margin-top: 1em; font-weight: bold; padding: 10px; border-radius: 4px; }
+        #status.success { color: #2e7d32; background-color: #e8f5e9; }
+        #status.error { color: #c62828; background-color: #ffebee; }
+
+        /* --- New Styles for Compiler UI --- */
+        .mode-selector { display: flex; margin-bottom: 1.5em; border-bottom: 1px solid #ccc; }
+        .mode-btn { background-color: #f0f0f0; color: #555; border: 1px solid #ccc; border-radius: 6px 6px 0 0; padding: 10px 15px; cursor: pointer; margin-right: 5px; margin-bottom: -1px; font-size: 1em; border-bottom: none; }
+        .mode-btn.active { background-color: white; color: #333; font-weight: bold; border-color: #ccc; border-bottom: 1px solid white; }
+
+        #compilerPanel { display: none; }
+        .form-group { margin-bottom: 1.5em; }
+        .form-group label { display: block; margin-bottom: 0.5em; font-weight: bold; color: #555; }
+        .form-group input[type="number"] { width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .range-inputs { display: flex; align-items: center; gap: 10px; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 2em 0; }
+        
+        #addMustHaveBtn { font-size: 0.9em; padding: 5px 10px; background-color: #5cb85c; }
+        #addMustHaveBtn:hover { background-color: #4cae4c; }
+        .must-have-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .remove-btn { background-color: #d9534f; font-size: 0.8em; padding: 6px 9px; }
+        .remove-btn:hover { background-color: #c9302c; }
+
+        #compileBtn { background-color: #f0ad4e; }
+        #compileBtn:hover { background-color: #ec971f; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Sequence Editor</h1>
-        <p>Enter your numbers separated by commas. This will be used by the random number generator.</p>
-        <textarea id="sequenceInput" placeholder="e.g., 11, 22, 33, 44, 55, 69"></textarea>
+
+        <!-- Mode Selector -->
+        <div class="mode-selector">
+            <button id="manualModeBtn" class="mode-btn active" onclick="switchMode('manual')">Manual Input</button>
+            <button id="compilerModeBtn" class="mode-btn" onclick="switchMode('compiler')">Sequence Compiler</button>
+        </div>
+
+        <!-- Panels for each mode -->
+        <div id="manualPanel">
+            <p>Enter your sequence below, with numbers separated by commas.</p>
+        </div>
+
+        <div id="compilerPanel">
+            <div class="form-group">
+                <label for="totalLength">1. Total numbers in final sequence:</label>
+                <input type="number" id="totalLength" placeholder="e.g., 10" min="1">
+            </div>
+            <div class="form-group">
+                <label>2. Must-have numbers (optional):</label>
+                <div id="mustHaveContainer">
+                    <!-- Dynamic inputs will go here -->
+                </div>
+                <button id="addMustHaveBtn" onclick="addMustHaveInput()">+ Add Number</button>
+            </div>
+            <div class="form-group">
+                <label>3. Generate remaining numbers from range:</label>
+                <div class="range-inputs">
+                    <input type="number" id="rangeMin" placeholder="Min">
+                    <span>to</span>
+                    <input type="number" id="rangeMax" placeholder="Max">
+                </div>
+            </div>
+            <button id="compileBtn" onclick="compileSequence()">Compile Sequence</button>
+        </div>
+
+        <hr>
+
+        <!-- Shared Output & Actions -->
+        <h2>Final Sequence</h2>
+        <textarea id="sequenceInput" placeholder="e.g., 11, 22, 33, 44, 55"></textarea>
+        <button onclick="shuffleSequence()">Shuffle Current Sequence</button>
         <button onclick="saveSequence()">Save Sequence for Generator</button>
         <p id="status"></p>
     </div>
 
     <script>
+        // --- DOM Elements ---
         const sequenceInput = document.getElementById('sequenceInput');
         const status = document.getElementById('status');
+        const manualModeBtn = document.getElementById('manualModeBtn');
+        const compilerModeBtn = document.getElementById('compilerModeBtn');
+        const manualPanel = document.getElementById('manualPanel');
+        const compilerPanel = document.getElementById('compilerPanel');
+        const mustHaveContainer = document.getElementById('mustHaveContainer');
 
-        // Load the saved sequence when the page loads
+        // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
             const savedSequence = localStorage.getItem('customSequence');
             if (savedSequence) {
                 sequenceInput.value = savedSequence;
-                status.textContent = 'Loaded previously saved sequence.';
+                setStatus('Loaded previously saved sequence.', 'success');
             }
+            // Add one initial "must-have" input field
+            addMustHaveInput();
         });
+
+        // --- UI Functions ---
+        function switchMode(mode) {
+            if (mode === 'manual') {
+                manualPanel.style.display = 'block';
+                compilerPanel.style.display = 'none';
+                manualModeBtn.classList.add('active');
+                compilerModeBtn.classList.remove('active');
+            } else {
+                manualPanel.style.display = 'none';
+                compilerPanel.style.display = 'block';
+                manualModeBtn.classList.remove('active');
+                compilerModeBtn.classList.add('active');
+            }
+        }
+
+        function setStatus(message, type = 'success') {
+            status.textContent = message;
+            status.className = type; // 'success' or 'error'
+        }
+
+        function addMustHaveInput() {
+            const itemCount = mustHaveContainer.children.length;
+            const newItem = document.createElement('div');
+            newItem.className = 'must-have-item';
+            newItem.innerHTML = `
+                <input type="number" placeholder="Number ${itemCount + 1}">
+                <button class="remove-btn" onclick="this.parentElement.remove()">×</button>
+            `;
+            mustHaveContainer.appendChild(newItem);
+        }
+
+        // --- Core Logic ---
+        function compileSequence() {
+            try {
+                // 1. Gather and Parse Inputs
+                const totalLength = parseInt(document.getElementById('totalLength').value, 10);
+                const min = parseInt(document.getElementById('rangeMin').value, 10);
+                const max = parseInt(document.getElementById('rangeMax').value, 10);
+                
+                const mustHaveInputs = Array.from(mustHaveContainer.querySelectorAll('input'));
+                const mustHaves = mustHaveInputs
+                    .map(input => parseInt(input.value, 10))
+                    .filter(val => !isNaN(val)); // Filter out empty inputs
+
+                // Use a Set to automatically handle uniqueness of must-haves
+                const mustHavesSet = new Set(mustHaves);
+
+                // 2. Validate Inputs
+                if (isNaN(totalLength) || isNaN(min) || isNaN(max)) {
+                    throw new Error('Please fill in Total Length, Min, and Max fields.');
+                }
+                if (min >= max) {
+                    throw new Error('Min range must be less than Max range.');
+                }
+                if (totalLength <= 0) {
+                    throw new Error('Total length must be a positive number.');
+                }
+                if (mustHavesSet.size > totalLength) {
+                    throw new Error('You have more must-have numbers than the total sequence length.');
+                }
+
+                // 3. Generate the pool of possible random numbers
+                const pool = new Set();
+                for (let i = min; i <= max; i++) {
+                    pool.add(i);
+                }
+
+                // Ensure all must-haves are within the specified range and remove them from the pool
+                for (const num of mustHavesSet) {
+                    if (!pool.has(num)) {
+                        throw new Error(`Must-have number ${num} is outside the specified Min/Max range.`);
+                    }
+                    pool.delete(num);
+                }
+                
+                // 4. Generate the remaining numbers
+                const numbersToGenerate = totalLength - mustHavesSet.size;
+                if (pool.size < numbersToGenerate) {
+                    throw new Error(`Not enough unique numbers in the range [${min}-${max}] to complete the sequence.`);
+                }
+                
+                const poolArray = Array.from(pool);
+                // Shuffle the pool and pick the required number of elements
+                for (let i = poolArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [poolArray[i], poolArray[j]] = [poolArray[j], poolArray[i]];
+                }
+                
+                const randomPart = poolArray.slice(0, numbersToGenerate);
+                
+                // 5. Combine and display the final sequence
+                const finalSequence = [...mustHavesSet, ...randomPart];
+                sequenceInput.value = finalSequence.join(', ');
+                setStatus(`Successfully compiled a sequence of ${totalLength} numbers.`, 'success');
+
+            } catch (error) {
+                setStatus(error.message, 'error');
+            }
+        }
+
+        function shuffleSequence() {
+            const currentSequence = sequenceInput.value.trim();
+            if (!currentSequence) {
+                setStatus('Cannot shuffle an empty sequence.', 'error');
+                return;
+            }
+
+            const array = currentSequence.split(',')
+                .map(s => s.trim())
+                .filter(s => s !== ''); // Handle trailing commas or empty spots
+
+            // Fisher-Yates Shuffle Algorithm
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+
+            sequenceInput.value = array.join(', ');
+            setStatus('Sequence shuffled successfully.', 'success');
+        }
 
         function saveSequence() {
             const sequence = sequenceInput.value;
             if (sequence.trim() === '') {
-                localStorage.removeItem('customSequence'); // Clear storage if input is empty
-                status.textContent = 'Sequence cleared. The generator will use its default.';
+                localStorage.removeItem('customSequence');
+                setStatus('Sequence cleared. The generator will use its default.', 'success');
             } else {
                 localStorage.setItem('customSequence', sequence);
-                status.textContent = 'Sequence saved! You can now open or refresh the main random.org page.';
+                setStatus('Sequence saved! You can now open or refresh the main random.org page.', 'success');
             }
         }
     </script>

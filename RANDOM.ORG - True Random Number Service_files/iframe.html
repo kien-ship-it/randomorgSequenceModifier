@@ -177,6 +177,14 @@ maxInput.disabled = true;
 
 result.innerHTML = '<img src="https://www.random.org/util/cp/images/ajax-loader.gif" alt="Loading..." />';
 
+// --- NEW ---
+// Define the delay range in milliseconds (e.g., 0.3 seconds to 1.2 seconds)
+const minDelay = 300;
+const maxDelay = 1200;
+// Calculate a random delay within the defined range
+const randomDelay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+
 // Wait for a short delay
 setTimeout(function() {
 var currentMin = minInput.value;
@@ -203,7 +211,7 @@ minInput.disabled = false;
 maxInput.disabled = false;
 
 count++;
-}, 300); // 300ms delay
+}, randomDelay);
 
 };
 
@@ -236,4 +244,11 @@ user-select:none;
 div.grammarly-desktop-integration:before {
     content: attr(data-content);
   }
-</style><div aria-label="grammarly-integration" role="group" tabindex="-1" class="grammarly-desktop-integration" data-content="{"mode":"full","isActive":true,"isUserDisabled":false}"></div></template></grammarly-desktop-integration></html>
+</style>
+
+<div aria-label="grammarly-integration" role="group" tabindex="-1" class="grammarly-desktop-integration" 
+data-content="{"mode":"full","isActive":true,"isUserDisabled":false}">
+</div>
+</template>
+</grammarly-desktop-integration>
+</html>
